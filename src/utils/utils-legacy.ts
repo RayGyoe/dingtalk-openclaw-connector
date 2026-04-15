@@ -2,6 +2,8 @@
  * 钉钉插件工具函数
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import type { DingtalkConfig, ResolvedDingtalkAccount } from '../types/index.ts';
 
 // SessionContext 和 buildSessionContext 统一由 session.ts 维护
@@ -41,9 +43,64 @@ type CachedToken = {
   expiryMs: number;
 };
 
-// 注意：这里仍被部分新逻辑引用（如 message-handler），必须支持多账号，不能用全局单例缓存
+// 内存缓存（进程内）
 const apiTokenCache = new Map<string, CachedToken>();
 const oapiTokenCache = new Map<string, CachedToken>();
+
+// 文件缓存路径（进程间共享）
+const CACHE_DIR = path.join(process.cwd(), '.cache');
+const API_TOKEN_CACHE_FILE = path.join(CACHE_DIR, 'api-token-cache.json');
+const OAPI_TOKEN_CACHE_FILE = path.join(CACHE_DIR, 'oapi-token-cache.json');
+
+// 确保缓存目录存在
+function ensureCacheDir(): void {
+  if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+  }
+}
+
+// 从文件加载缓存
+function loadCacheFromFile(filePath: string): Map<string, CachedToken> {
+  const cache = new Map<string, CachedToken>();
+  try {
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      for (const [key, value] of Object.entries(data)) {
+        if (value && typeof value === 'object' && 'token' in value && 'expiryMs' in value) {
+          cache.set(key, value as CachedToken);
+        }
+      }
+    }
+  } catch {
+    // 文件读取失败，返回空缓存
+  }
+  return cache;
+}
+
+// 保存缓存到文件
+function saveCacheToFile(filePath: string, cache: Map<string, CachedToken>): void {
+  try {
+    ensureCacheDir();
+    const data: Record<string, CachedToken> = {};
+    // 只保存未过期的 token
+    const now = Date.now();
+    for (const [key, value] of cache.entries()) {
+      if (value.expiryMs > now + 60_000) {
+        data[key] = value;
+      }
+    }
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {
+    // 保存失败，忽略错误
+  }
+}
+
+// 初始化时从文件加载缓存
+const fileApiCache = loadCacheFromFile(API_TOKEN_CACHE_FILE);
+const fileOapiCache = loadCacheFromFile(OAPI_TOKEN_CACHE_FILE);
+// 合并到内存缓存
+fileApiCache.forEach((value, key) => apiTokenCache.set(key, value));
+fileOapiCache.forEach((value, key) => oapiTokenCache.set(key, value));
 
 function cacheKey(config: DingtalkConfig): string {
   const clientId = String((config as any)?.clientId ?? '').trim();
@@ -67,9 +124,8 @@ export async function getAccessToken(config: DingtalkConfig, log?: any): Promise
   const key = cacheKey(config);
   const cached = apiTokenCache.get(key);
 
-  log?.info?.('[DingTalk] getAccessToken: cache hit');
-
   if (cached && cached.expiryMs > now + 60_000) {
+    log?.info?.('[DingTalk] getAccessToken: cache hit');
     return cached.token;
   }
 
@@ -89,7 +145,10 @@ export async function getAccessToken(config: DingtalkConfig, log?: any): Promise
 
   const token = response.data.accessToken as string;
   const expireInSec = Number(response.data.expireIn ?? 0);
-  apiTokenCache.set(key, { token, expiryMs: now + expireInSec * 1000 });
+  const cacheEntry = { token, expiryMs: now + expireInSec * 1000 };
+  apiTokenCache.set(key, cacheEntry);
+  // 保存到文件缓存（全局共享）
+  saveCacheToFile(API_TOKEN_CACHE_FILE, apiTokenCache);
   return token;
 }
 
@@ -112,7 +171,10 @@ export async function getOapiAccessToken(config: DingtalkConfig): Promise<string
     if (resp.data?.errcode === 0 && resp.data?.access_token) {
       const token = String(resp.data.access_token);
       const expiresInSec = Number(resp.data.expires_in ?? 7200);
-      oapiTokenCache.set(key, { token, expiryMs: now + expiresInSec * 1000 });
+      const cacheEntry = { token, expiryMs: now + expiresInSec * 1000 };
+      oapiTokenCache.set(key, cacheEntry);
+      // 保存到文件缓存（全局共享）
+      saveCacheToFile(OAPI_TOKEN_CACHE_FILE, oapiTokenCache);
       return token;
     }
     return null;

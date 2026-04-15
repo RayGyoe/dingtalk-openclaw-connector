@@ -418,7 +418,7 @@ export async function addEmotionReply(config: DingtalkConfig, data: any, log?: a
       },
     }, {
       headers: { 'x-acs-dingtalk-access-token': token, 'Content-Type': 'application/json' },
-      timeout: 50000,
+      timeout: 10_000, // 10秒超时
     });
     log?.info?.(`[DingTalk][Emotion] 贴表情成功: msgId=${data.msgId}`);
   } catch (err: any) {
@@ -448,7 +448,7 @@ export async function recallEmotionReply(config: DingtalkConfig, data: any, log?
       },
     }, {
       headers: { 'x-acs-dingtalk-access-token': token, 'Content-Type': 'application/json' },
-      timeout: 5_000,
+      timeout: 10_000, // 10秒超时
     });
     log?.info?.(`[DingTalk][Emotion] 撤回表情成功: msgId=${data.msgId}`);
   } catch (err: any) {

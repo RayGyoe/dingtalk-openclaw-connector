@@ -402,7 +402,7 @@ export async function addEmotionReply(config: DingtalkConfig, data: any, log?: a
     const token = await getAccessToken(config);
     log?.info?.(`[DingTalk][Emotion] 贴表情: token=${token}`);
     const { dingtalkHttp } = await import('./http-client.ts');
-    await dingtalkHttp.post(`${DINGTALK_API}/v1.0/robot/emotion/reply`, {
+    await dingtalkHttp.post(`${DINGTALK_API}/v1.0/robot/emotion/reply?r=${Math.random()}`, {
       robotCode: data.robotCode ?? config.clientId,
       openMsgId: data.msgId,
       openConversationId: data.conversationId,

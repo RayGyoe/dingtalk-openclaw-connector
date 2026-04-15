@@ -74,6 +74,8 @@ export async function getAccessToken(config: DingtalkConfig): Promise<string> {
   const response = await dingtalkHttp.post(`${DINGTALK_API}/v1.0/oauth2/accessToken`, {
     appKey: config.clientId,
     appSecret: config.clientSecret,
+  }, {
+    timeout: 10_000, // 10秒超时
   });
 
   const token = response.data.accessToken as string;

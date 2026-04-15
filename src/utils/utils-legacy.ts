@@ -416,7 +416,7 @@ export async function addEmotionReply(config: DingtalkConfig, data: any, log?: a
       },
     }, {
       headers: { 'x-acs-dingtalk-access-token': token, 'Content-Type': 'application/json' },
-      timeout: 10_000,
+      timeout: 50000,
     });
     log?.info?.(`[DingTalk][Emotion] 贴表情成功: msgId=${data.msgId}`);
   } catch (err: any) {

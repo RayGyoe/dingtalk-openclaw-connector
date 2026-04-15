@@ -78,6 +78,10 @@ export async function getAccessToken(config: DingtalkConfig): Promise<string> {
     timeout: 10_000, // 10秒超时
   });
 
+  if (response.data.errcode !== 0) {
+    throw new Error(`[DingTalk] getAccessToken: ${response.data.errmsg}`);
+  }
+
   const token = response.data.accessToken as string;
   const expireInSec = Number(response.data.expireIn ?? 0);
   apiTokenCache.set(key, { token, expiryMs: now + expireInSec * 1000 });

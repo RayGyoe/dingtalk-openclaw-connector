@@ -124,6 +124,9 @@ export async function getAccessToken(config: DingtalkConfig, log?: any): Promise
   const key = cacheKey(config);
   const cached = apiTokenCache.get(key);
 
+  // 调试信息：打印缓存状态
+  log?.info?.(`[DingTalk] getAccessToken: key=${key}, cached=${!!cached}, expiryMs=${cached?.expiryMs}, now=${now}, valid=${cached ? cached.expiryMs > now + 60_000 : false}`);
+
   if (cached && cached.expiryMs > now + 60_000) {
     log?.info?.('[DingTalk] getAccessToken: cache hit');
     return cached.token;

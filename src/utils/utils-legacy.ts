@@ -62,7 +62,7 @@ function cacheKey(config: DingtalkConfig): string {
 /**
  * 获取钉钉 Access Token（新版 API）
  */
-export async function getAccessToken(config: DingtalkConfig): Promise<string> {
+export async function getAccessToken(config: DingtalkConfig, log?: any): Promise<string> {
   const now = Date.now();
   const key = cacheKey(config);
   const cached = apiTokenCache.get(key);
@@ -410,7 +410,7 @@ export function buildMediaSystemPrompt(): string {
 export async function addEmotionReply(config: DingtalkConfig, data: any, log?: any): Promise<void> {
   if (!data.msgId || !data.conversationId) return;
   try {
-    const token = await getAccessToken(config);
+    const token = await getAccessToken(config, log);
     log?.info?.(`[DingTalk][Emotion] 贴表情: token=${token}`);
     const { dingtalkHttp } = await import('./http-client.ts');
     await dingtalkHttp.post(`${DINGTALK_API}/v1.0/robot/emotion/reply?r=${Math.random()}`, {
@@ -441,7 +441,7 @@ export async function addEmotionReply(config: DingtalkConfig, data: any, log?: a
 export async function recallEmotionReply(config: DingtalkConfig, data: any, log?: any): Promise<void> {
   if (!data.msgId || !data.conversationId) return;
   try {
-    const token = await getAccessToken(config);
+    const token = await getAccessToken(config, log);
     const { dingtalkHttp } = await import('./http-client.ts');
     await dingtalkHttp.post(`${DINGTALK_API}/v1.0/robot/emotion/recall`, {
       robotCode: data.robotCode ?? config.clientId,

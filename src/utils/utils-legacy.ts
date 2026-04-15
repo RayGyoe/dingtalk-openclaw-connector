@@ -400,6 +400,7 @@ export async function addEmotionReply(config: DingtalkConfig, data: any, log?: a
   if (!data.msgId || !data.conversationId) return;
   try {
     const token = await getAccessToken(config);
+    log?.info?.(`[DingTalk][Emotion] 贴表情: token=${token}`);
     const { dingtalkHttp } = await import('./http-client.ts');
     await dingtalkHttp.post(`${DINGTALK_API}/v1.0/robot/emotion/reply`, {
       robotCode: data.robotCode ?? config.clientId,
@@ -419,7 +420,7 @@ export async function addEmotionReply(config: DingtalkConfig, data: any, log?: a
     });
     log?.info?.(`[DingTalk][Emotion] 贴表情成功: msgId=${data.msgId}`);
   } catch (err: any) {
-    log?.warn?.(`[DingTalk][Emotion] 贴表情失败（不影响主流程）: ${err.message}`);
+    log?.warn?.(`[DingTalk][Emotion] 贴表情失败（不影响主流程）: ${JSON.stringify(err)}`);
   }
 }
 
